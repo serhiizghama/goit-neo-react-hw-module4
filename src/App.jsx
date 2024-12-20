@@ -19,27 +19,38 @@ function App() {
   const [modalImage, setModalImage] = useState("");
 
   useEffect(() => {
-    const handleSearch = async () => {
+    const fetchImages = async () => {
       try {
-        if (!query) {
-          return;
-        }
+        if (!query) return;
         setLoading(true);
         setError(false);
-        if (page === 1) {
-          setImages([]);
-        }
         const data = await searchPhotos(query, page);
+
+        // Replace images if it's a new query, or append on load more
+        setImages((prevImages) =>
+          page === 1 ? data.results : [...prevImages, ...data.results]
+        );
+
+        // Show "Load More" button if there are more results
         setLoadMore(data.results.length === DEFAULT_PER_PAGE);
-        setImages((prevImages) => [...prevImages, ...data.results]);
       } catch (error) {
+        console.log(error?.message);
         setError(true);
       } finally {
         setLoading(false);
       }
     };
-    handleSearch();
+
+    fetchImages();
   }, [query, page]);
+
+  const handleSearch = (newQuery) => {
+    setQuery(newQuery);
+    setPage(1);
+    setImages([]);
+  };
+
+  const handleLoadMore = () => setPage((prevPage) => prevPage + 1);
 
   const openModal = (img) => {
     setModalImage(img);
@@ -48,11 +59,9 @@ function App() {
 
   const closeModal = () => setShowModal(false);
 
-  const handleLoadMore = () => setPage(page + 1);
-
   return (
     <>
-      <SearchBar onSearch={setQuery} />
+      <SearchBar onSearch={handleSearch} />
       {error && <ErrorMessage />}
       {images.length > 0 && (
         <ImageGallery images={images} onModal={openModal} />
